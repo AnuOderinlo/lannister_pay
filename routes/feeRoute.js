@@ -5,7 +5,7 @@ const feeController = require("../controller/feeController");
 const router = express.Router();
 
 router
-  .route("/fee")
+  .route("/fees")
   .get(feeController.getAllFSC)
   .post(feeController.createFeeConfigurationSpec)
   .delete(feeController.deleteAllFSC);
