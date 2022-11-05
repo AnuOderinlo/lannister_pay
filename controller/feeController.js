@@ -1,40 +1,15 @@
 const FSC = require("./../model/feeConfigurationModel");
-const redis = require("redis");
-const client = redis.createClient();
-const port = process.env.PORT || 3000;
+const {
+  appliedFeeValue,
+  chargeAmount,
+  settlementAmount,
+} = require("./../utils/feeComputationUtils");
 
-const appliedFeeValue = (obj, amount) => {
-  let total;
-  if (obj.feeValue.includes(":")) {
-    let valueArr = obj.feeValue.split(":");
-    let value = Number(valueArr[0]);
-    let percentValue = Number(valueArr[1]);
-    total = value + (percentValue / 100) * amount;
-  } else {
-    if (obj.feeType === "PERC") {
-      total = (Number(obj.feeValue) / 100) * amount;
-    } else {
-      total = Number(obj.feeValue);
-    }
-  }
-
-  return Math.round(total);
-};
-
-const chargeAmount = (obj, amount, bearsFee) => {
-  if (bearsFee) {
-    return Number(amount) + appliedFeeValue(obj, amount);
-  } else {
-    return amount;
-  }
-};
-
-const settlementAmount = (obj, amount, bearsFee) => {
-  return chargeAmount(obj, amount, bearsFee) - appliedFeeValue(obj, amount);
-};
-
-// console.log(appliedFeeValue(testObj, 3500));
-
+/**
+ * createFeeConfigurationSpec API create the Fee Configuration Specification(FCS)
+ * @param {*} req //Request
+ * @param {*} res //Response
+ */
 exports.createFeeConfigurationSpec = async (req, res) => {
   try {
     const { FeeConfigurationSpec } = req.body;
@@ -71,6 +46,11 @@ exports.createFeeConfigurationSpec = async (req, res) => {
   }
 };
 
+/**
+ * getAllFSC API fetch all Fee Configuration Spec from the database
+ * @param {*} req
+ * @param {*} res
+ */
 exports.getAllFSC = async (req, res) => {
   try {
     const allFSC = await FSC.find(); //query
@@ -90,6 +70,31 @@ exports.getAllFSC = async (req, res) => {
   }
 };
 
+/**
+ * deleteAllFSC API: to delete all Fee Configuration Specification from the Database
+ * @param {*} req
+ * @param {*} res
+ */
+exports.deleteAllFSC = async (req, res) => {
+  try {
+    await FSC.deleteMany();
+    res.status(200).json({
+      status: "OK",
+      message: "Successfully deleted all Fee Configuration Spec",
+    });
+  } catch (err) {
+    res.status(400).json({
+      status: "Failed",
+      message: `Unable to delete all FSC, ${err}`,
+    });
+  }
+};
+
+/**
+ * createFeeComputation API create the fee computation based on a specific Fee Configuration Spec
+ * @param {*} req
+ * @param {*} res
+ */
 exports.createFeeComputation = async (req, res) => {
   try {
     const allFSC = await FSC.find();
@@ -221,9 +226,6 @@ exports.createFeeComputation = async (req, res) => {
         );
       }
 
-      // await client.connect(port, "127.0.0.1");
-      // client.set("data", data);
-
       res.status(200).json({
         // status: "OK",
         data,
@@ -231,24 +233,9 @@ exports.createFeeComputation = async (req, res) => {
     }
   } catch (err) {
     console.log(err);
-
     res.status(400).json({
       status: "Failed",
-      message: `Unable to fetch a FSC, ${err}`,
+      message: `Unable to Create Fee Computation, ${err}`,
     });
   }
 };
-
-// exports.getCache = async (req, res) => {
-//   await client.connect();
-//   client.get("data", (err, result) => {
-//     if (result) {
-//       res.status(200).json({
-//         // status: "OK",
-//         data,
-//       });
-//     } else {
-//       createFeeComputation(req, res);
-//     }
-//   });
-// };

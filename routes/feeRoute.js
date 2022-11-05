@@ -7,7 +7,8 @@ const router = express.Router();
 router
   .route("/fee")
   .get(feeController.getAllFSC)
-  .post(feeController.createFeeConfigurationSpec);
+  .post(feeController.createFeeConfigurationSpec)
+  .delete(feeController.deleteAllFSC);
 
 router
   .route("/compute-transaction-fee")
