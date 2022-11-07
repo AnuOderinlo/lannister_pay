@@ -112,82 +112,75 @@ exports.createFeeComputation = async (req, res) => {
         Error: `No Fee configuration for ${Currency} transactions`,
       });
     } else {
+      let locale = Country === CurrencyCountry ? "LOCL" : "INTL";
       for (const el of allFSC) {
         if (Country == "NG") {
-          if (el.feeLocale === "LOCL" || el.feeLocale === "*") {
+          if (el.feeLocale === locale || el.feeLocale === "*") {
             if (Type === el.feeEntity || Type === "" || el.feeEntity === "*") {
               if (
-                Brand === el.entityProperty ||
-                Brand === "" ||
-                Issuer === el.entityProperty ||
-                Number === el.entityProperty ||
-                SixID === el.entityProperty ||
-                el.entityProperty === "*"
+                el.feeEntity === "CREDIT-CARD" &&
+                (el.entityProperty === Issuer ||
+                  el.entityProperty === Brand ||
+                  el.entityProperty === Number ||
+                  el.entityProperty == SixID ||
+                  el.entityProperty === "*")
               ) {
+                // console.log(el);
+                moreSpecificFSC.push(el);
+                // break;
+              } else if (
+                el.feeEntity === "DEBIT-CARD" &&
+                (el.entityProperty === Issuer ||
+                  el.entityProperty === Brand ||
+                  el.entityProperty === Number ||
+                  el.entityProperty == SixID ||
+                  el.entityProperty === "*")
+              ) {
+                moreSpecificFSC.push(el);
+                // console.log(el);
+                // break;
+              } else if (
+                el.feeEntity === "BANK-ACCOUNT" &&
+                (el.entityProperty === Issuer ||
+                  el.entityProperty === Brand ||
+                  el.entityProperty === Number ||
+                  el.entityProperty == SixID ||
+                  el.entityProperty === "*")
+              ) {
+                moreSpecificFSC.push(el);
+                // console.log(el);
+                // break;
+              } else if (
+                el.feeEntity === "USSD" &&
+                (el.entityProperty === Issuer ||
+                  el.entityProperty === Brand ||
+                  el.entityProperty === Number ||
+                  el.entityProperty == SixID ||
+                  el.entityProperty === "*")
+              ) {
+                moreSpecificFSC.push(el);
+                // console.log(el);
+                // break;
+              } else if (
+                el.feeEntity === "WALLET-ID" &&
+                (el.entityProperty === Issuer ||
+                  el.entityProperty === Brand ||
+                  el.entityProperty === Number ||
+                  el.entityProperty == SixID ||
+                  el.entityProperty === "*")
+              ) {
+                moreSpecificFSC.push(el);
+                // break;
+              } else {
                 if (
-                  el.feeEntity === "CREDIT-CARD" &&
-                  (el.entityProperty === Issuer ||
-                    el.entityProperty === Brand ||
-                    el.entityProperty === Number ||
-                    el.entityProperty === SixID ||
-                    el.entityProperty === "*")
+                  `${el.feeLocale}${el.feeEntity}${el.entityProperty}`.includes(
+                    "*"
+                  ) &&
+                  el.feeEntity.includes("*")
                 ) {
-                  // console.log(el);
-                  moreSpecificFSC.push(el);
-                  break;
-                } else if (
-                  el.feeEntity === "DEBIT-CARD" &&
-                  (el.entityProperty === Issuer ||
-                    el.entityProperty === Brand ||
-                    el.entityProperty === Number ||
-                    el.entityProperty === SixID ||
-                    el.entityProperty === "*")
-                ) {
-                  moreSpecificFSC.push(el);
-                  // console.log(el);
-                  break;
-                } else if (
-                  el.feeEntity === "BANK-ACCOUNT" &&
-                  (el.entityProperty === Issuer ||
-                    el.entityProperty === Brand ||
-                    el.entityProperty === Number ||
-                    el.entityProperty === SixID ||
-                    el.entityProperty === "*")
-                ) {
-                  moreSpecificFSC.push(el);
-                  // console.log(el);
-                  break;
-                } else if (
-                  el.feeEntity === "USSD" &&
-                  (el.entityProperty === Issuer ||
-                    el.entityProperty === Brand ||
-                    el.entityProperty === Number ||
-                    el.entityProperty === SixID)
-                ) {
-                  moreSpecificFSC.push(el);
-                  // console.log(el);
-                  break;
-                } else if (
-                  el.feeEntity === "WALLET-ID" &&
-                  (el.entityProperty === Issuer ||
-                    el.entityProperty === Brand ||
-                    el.entityProperty === Number ||
-                    el.entityProperty === SixID)
-                ) {
-                  moreSpecificFSC.push(el);
-                  console.log(el);
-                  break;
-                } else {
-                  if (
-                    `${el.feeLocale}${el.feeEntity}${el.entityProperty}`.includes(
-                      "*"
-                    ) &&
-                    el.feeEntity.includes("*")
-                  ) {
-                    lessSpecificFSC.push(el);
+                  lessSpecificFSC.push(el);
 
-                    continue;
-                  }
+                  continue;
                 }
               }
             }
@@ -195,22 +188,53 @@ exports.createFeeComputation = async (req, res) => {
         }
       }
 
+      //Differentiating moreSpecificFSC into higher precedence through entity property
+      let numberMoreSpecific = [];
+      let sixIDMoreSpecific = [];
+      let brandMoreSpecific = [];
+      let issuerMoreSpecific = [];
+      let allMoreSpecific = [];
+
+      moreSpecificFSC.forEach((el) => {
+        if (el.entityProperty === Number) {
+          numberMoreSpecific.push(el);
+        } else if (el.entityProperty === SixID) {
+          sixIDMoreSpecific.push(el);
+        } else if (el.entityProperty === Brand) {
+          brandMoreSpecific.push(el);
+        } else if (el.entityProperty === Issuer) {
+          issuerMoreSpecific.push(el);
+        } else if (el.entityProperty === "*") {
+          allMoreSpecific.push(el);
+        }
+      });
+
       let data;
       if (moreSpecificFSC.length > 0) {
+        let fscArr;
+        if (numberMoreSpecific.length > 0) {
+          fscArr = numberMoreSpecific;
+        } else if (sixIDMoreSpecific.length > 0) {
+          fscArr = sixIDMoreSpecific;
+        } else if (brandMoreSpecific.length > 0) {
+          fscArr = brandMoreSpecific;
+        } else if (issuerMoreSpecific.length > 0) {
+          fscArr = issuerMoreSpecific;
+        } else if (allMoreSpecific.length > 0) {
+          fscArr = allMoreSpecific;
+        }
+
         data = {};
-        data["AppliedFeeID"] = moreSpecificFSC[0].feeId;
-        data["AppliedFeeValue"] = appliedFeeValue(moreSpecificFSC[0], Amount);
-        data["ChargeAmount"] = chargeAmount(
-          moreSpecificFSC[0],
-          Amount,
-          BearsFee
-        );
+        data["AppliedFeeID"] = fscArr[0].feeId;
+        data["AppliedFeeValue"] = appliedFeeValue(fscArr[0], Amount);
+        data["ChargeAmount"] = chargeAmount(fscArr[0], Amount, BearsFee);
         data["SettlementAmount"] = settlementAmount(
-          moreSpecificFSC[0],
+          fscArr[0],
           Amount,
           BearsFee
         );
-      } else {
+      } else if (lessSpecificFSC.length > 0) {
+        console.log("lessSpecific", lessSpecificFSC);
         data = {};
         data["AppliedFeeID"] = lessSpecificFSC[0].feeId;
         data["AppliedFeeValue"] = appliedFeeValue(lessSpecificFSC[0], Amount);
@@ -224,6 +248,10 @@ exports.createFeeComputation = async (req, res) => {
           Amount,
           BearsFee
         );
+      } else {
+        return res.status(400).json({
+          Error: "No fee configuration for this transaction",
+        });
       }
 
       res.status(200).json({
